@@ -1,5 +1,5 @@
 from flask import render_template, flash, redirect
-from app import app
+from app import app, firebase, db, auth
 from .forms import LoginForm
 
 @app.route('/')
@@ -24,10 +24,20 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
     form = LoginForm()
     if form.validate_on_submit():
-        flash('Login requested for ID="%s", remember_me=%s' %
-              (form.id.data, str(form.remember_me.data)))
+
+        user = None
+        try:
+            user = auth.sign_in_with_email_and_password(form.email.data, form.password.data)
+        except: pass
+
+        if user is not None:
+            flash('Login complete for email="%s", password=%s'
+                % (form.email.data, str(form.password.data)))
+        else:
+            flash('Failure')
         return redirect('/index')
     return render_template('login.html',
                             title='Sign in',
