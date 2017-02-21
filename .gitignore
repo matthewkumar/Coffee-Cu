@@ -10,6 +10,7 @@
 .Python
 *.log
 man/
+/venv
 
 # Secrets / Authentication
 secrets.py

@@ -1,8 +1,10 @@
 from flask import Flask
 import pyrebase
+import os
 
 app = Flask(__name__)
 app.config.from_object('config')
+app.secret_key = os.urandom(24)
 
 config = {
   "apiKey": "AIzaSyB07PemCqeZDjBjgJu7dAOp6gUJI7KkirE",
