@@ -1,9 +1,5 @@
 {
     "default": {
-        "Werkzeug": {
-            "version": "==0.10.4",
-            "hash": "sha256:a438aa8c3f513a5cf3dda02a62f9e022b7598e9fbfeba14ba2d6dd957c8ab436"
-        },
         "six": {
             "version": "==1.10.0",
             "hash": "sha256:0ff78c403d9bccf5a425a6d31a12aa6b47f1c21ca4dc2573a7e2f32a97335eb1"
@@ -24,10 +20,6 @@
             "version": "==0.10.1",
             "hash": "sha256:4c83829ff83d408b5e1d4995472265411d2c414112298f2eb4b359d9e4563373"
         },
-        "mongoengine": {
-            "version": "==0.11.0",
-            "hash": "sha256:39532b0d2d26de3bb2bb174fef0209bb1925f81942b999808050d99917c0c6b9"
-        },
         "rsa": {
             "version": "==3.4.2",
             "hash": "sha256:43f682fea81c452c98d09fc316aae12de6d30c4b5c84226642cf8f8fd1c93abd"
@@ -44,17 +36,13 @@
             "version": "==0.10.3",
             "hash": "sha256:e404d3b7bd86c1bc931906098e7c1305d6a3a6dcef141b8bb1059903abb3ceeb"
         },
-        "oauth2client": {
-            "version": "==3.0.0",
-            "hash": "sha256:5b5b056ec6f2304e7920b632885bd157fa71d1a7f3ddd00a43b1541a8d1a2460"
+        "Werkzeug": {
+            "version": "==0.10.4",
+            "hash": "sha256:a438aa8c3f513a5cf3dda02a62f9e022b7598e9fbfeba14ba2d6dd957c8ab436"
         },
         "pyparsing": {
             "version": "==2.1.10",
             "hash": "sha256:67101d7acee692962f33dd30b5dce079ff532dd9aa99ff48d52a3dad51d2fe84"
-        },
-        "pyasn1": {
-            "version": "==0.2.2",
-            "hash": "sha256:d4178dce4243b5177afb5410156941fdc956288413ca676a56135cfeb008eba5"
         },
         "pyasn1-modules": {
             "version": "==0.0.8",
@@ -84,9 +72,9 @@
             "version": "==0.4.0",
             "hash": "sha256:f9149b63ec6b32aec44acb061ad851eb4eb065e742341147d116d69f8e35ae2b"
         },
-        "flask-mongoengine": {
-            "version": "==0.8.2",
-            "hash": "sha256:f746e8ec78e40482f8861dd15427b714fb395b4461754521371819745cf0502a"
+        "oauth2client": {
+            "version": "==3.0.0",
+            "hash": "sha256:5b5b056ec6f2304e7920b632885bd157fa71d1a7f3ddd00a43b1541a8d1a2460"
         },
         "jws": {
             "version": "==0.1.3",
@@ -116,9 +104,9 @@
             "version": "==0.24",
             "hash": "sha256:cbb3fcf8d3e33df861709ecaf89d9e6629cff0a217bc2848f1b41cd30d360519"
         },
-        "pymongo": {
-            "version": "==3.4.0",
-            "hash": "sha256:775443cebf95614165c5c9bb96fd0ceba8f8199379a843ecd5c71934bf897d83"
+        "pyasn1": {
+            "version": "==0.2.2",
+            "hash": "sha256:d4178dce4243b5177afb5410156941fdc956288413ca676a56135cfeb008eba5"
         },
         "Pyrebase": {
             "version": "==3.0.27",
@@ -135,7 +123,7 @@
         ],
         "requires": {},
         "hash": {
-            "sha256": "e5d579884bac8042d8ef44683cb82fd667f92ea6ebecfe5dcf2e7c53c5a0e512"
+            "sha256": "51915c3d4281ab0405ed6ecf87c64b964fbb8b5db127281e259ed927fcdf664b"
         }
     }
 }
