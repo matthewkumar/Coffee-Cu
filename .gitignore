@@ -11,9 +11,12 @@
 *.log
 man/
 /venv
+/app/.DS_Store
+
 
 # Secrets / Authentication
 secrets.py
 
 # SCSS
 .webassets-cache
+.DS_Store
