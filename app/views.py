@@ -1,7 +1,7 @@
 from flask import render_template, flash, redirect, session, url_for
 from requests.exceptions import HTTPError
 from app import app, firebase, db, auth
-from .forms import LoginForm, SignupForm
+from .forms import LoginForm, SignupForm, ProfileForm
 from .decorators import logged_in, not_logged_in
 
 
@@ -11,9 +11,42 @@ def index():
     user = None
     if 'idToken' in session:
         user = auth.get_account_info(session['idToken'])
-        print("Found session for user.")
+        print('Found session for user.')
 
-    return render_template("index.html", title='Home', user=user)
+    return render_template('index.html', user=user)
+
+
+@app.route('/show/<id>', methods=['GET'])
+@logged_in
+def show():
+    profile = db.child('profiles').child(id).get().val()
+    return render_template('show.html', profile=profile)
+
+
+@app.route('/edit', methods=['GET', 'POST'])
+@logged_in
+def edit():
+    profile = db.child('profiles').child(session['idToken'])
+    form = ProfileForm()#obj=profile)
+    if form.validate_on_submit():
+        new_profile = {
+            'school': form.school.data,
+            'year': form.year.data,
+            'major': form.major.data,
+            'about': form.about.data,
+            'likes': form.likes.data,
+            'contactfor': form.contactfor.data,
+            'twitter': form.twitter.data,
+            'facebook': form.facebook.data,
+            'linkedin': form.linkedin.data,
+            'website': form.website.data,
+            'make_public': form.make_public.data
+        }
+        db.child('profiles').child(session['idToken']).set(new_profile)
+        flash('Profile updated.')
+        return redirect('%s/%s' % (url_for('show'), session['idToken']))
+    else:
+        return render_template('edit.html', form=form)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -27,12 +60,16 @@ def signup():
         except HTTPError: pass
 
         if user is not None:
+            idnum = db.child('app_metadata').get().val()['user_idnum_counter'] + 1
+            db.child('app_metadata').set({'user_idnum_counter': idnum})
+
             # verify email (form validator is just a regex!)
             auth.send_email_verification(user['idToken'])
             # save details in the user data table
-            userdata = { "firstname": form.firstname.data,
-                        "lastname": form.lastname.data }
-            db.child("users").push(userdata, user['idToken'])
+            userdata = { 'firstname': form.firstname.data,
+                        'lastname': form.lastname.data,
+                        'idnum': idnum }
+            db.child('profile').push(userdata, user['idToken'])
 
             flash('Thanks for signing up!')
             return redirect(url_for('login'))
@@ -41,7 +78,7 @@ def signup():
             flash('An account already exists for that email address!')
             return redirect(url_for('signup'))
     else:
-        return render_template('signup.html', title='Sign up', form=form)
+        return render_template('signup.html', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -79,10 +116,3 @@ def login():
 def logout():
     session.pop('idToken', None) # end user session
     return redirect(url_for('index'))
-
-
-
-
-
-
-
