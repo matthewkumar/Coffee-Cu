@@ -67,10 +67,10 @@ def login():
                 # create new user session
                 session['idToken'] = user['idToken']
                 flash('Login complete for email="%s"' % (form.email.data))
+                return redirect(url_for('index'))
         else:
             flash('Sorry, we couldn\'t find those credentials!')
-
-        return redirect(url_for('index'))
+            return redirect(url_for('login'))
     else:
         return render_template('login.html', title='Sign in', form=form)
 
