@@ -11,15 +11,13 @@ def index():
     user = None
     if 'idToken' in session:
         user = auth.get_account_info(session['idToken'])
-        print('Found session for user.')
-
     return render_template('index.html', user=user)
 
 
-@app.route('/show/<id>', methods=['GET'])
+@app.route('/show/<email>', methods=['GET'])
 @logged_in
 def show():
-    profile = db.child('profiles').child(id).get().val()
+    profile = db.child('profiles').child(email).get().val()
     return render_template('show.html', profile=profile)
 
 
@@ -42,9 +40,9 @@ def edit():
             'website': form.website.data,
             'make_public': form.make_public.data
         }
-        db.child('profiles').child(session['idToken']).set(new_profile)
+        db.child('profiles').child().update(new_profile)
         flash('Profile updated.')
-        return redirect('%s/%s' % (url_for('show'), session['idToken']))
+        return redirect('%s/%s' % (url_for('show'), EMAIL))
     else:
         return render_template('edit.html', form=form)
 
@@ -56,22 +54,23 @@ def signup():
     if form.validate_on_submit():
         user = None
         try:
-            user = auth.create_user_with_email_and_password(form.email.data, form.password.data)
-        except HTTPError: pass
+            user = auth.create_user_with_email_and_password(form.email.data,
+                form.password.data)
+        except HTTPError:
+            pass
 
         if user is not None:
-            idnum = db.child('app_metadata').get().val()['user_idnum_counter'] + 1
-            db.child('app_metadata').set({'user_idnum_counter': idnum})
-
             # verify email (form validator is just a regex!)
             auth.send_email_verification(user['idToken'])
             # save details in the user data table
-            userdata = { 'firstname': form.firstname.data,
-                        'lastname': form.lastname.data,
-                        'idnum': idnum }
-            db.child('profile').push(userdata, user['idToken'])
+            profile = {
+                'firstname': form.firstname.data,
+                'lastname': form.lastname.data,
+                'enabled': True
+            }
+            db.child('profiles').child(form.email.data).push(profile)
 
-            flash('Thanks for signing up!')
+            flash('Thanks for signing up! Please verify your email to log in.')
             return redirect(url_for('login'))
         else:
             # TODO this message may not be accurate
@@ -89,8 +88,10 @@ def login():
         # try to authenticate
         user = None
         try:
-            user = auth.sign_in_with_email_and_password(form.email.data, form.password.data)
-        except HTTPError: pass
+            user = auth.sign_in_with_email_and_password(form.email.data,
+                form.password.data)
+        except HTTPError:
+            pass
 
         if user is not None:
             # if auth succeeds, see if email is verified
@@ -114,5 +115,5 @@ def login():
 @app.route('/logout')
 @logged_in
 def logout():
-    session.pop('idToken', None) # end user session
+    session.pop('idToken', None)   # end user session
     return redirect(url_for('index'))
