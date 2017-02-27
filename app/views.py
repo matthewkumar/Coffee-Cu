@@ -9,23 +9,77 @@ from .decorators import logged_in, not_logged_in
 @app.route('/index')
 def index():
     user = None
-    if 'idToken' in session:
+    try:
         user = auth.get_account_info(session['idToken'])
+    except (KeyError, HTTPError):
+        pass
     return render_template('index.html', user=user)
 
 
-@app.route('/show/<email>', methods=['GET'])
-@logged_in
-def show():
-    profile = db.child('profiles').child(email).get().val()
-    return render_template('show.html', profile=profile)
+@app.route('/signup', methods=['GET', 'POST'])
+@not_logged_in
+def signup():
+    form = SignupForm()
+    if form.validate_on_submit():
+        try:
+            user = auth.create_user_with_email_and_password(form.email.data,
+                form.password.data)
+            auth.send_email_verification(user['idToken'])
+
+            profile = {
+                'firstname': form.firstname.data,
+                'lastname': form.lastname.data,
+                'email': form.email.data,
+                'enabled': True
+            }
+            escapedEmail = escapeEmailAddress(form.email.data)
+            db.child('users').child(escapedEmail).set(profile,
+                user['idToken'])
+
+            flash('Thanks for signing up! Please verify your email to log in.')
+            return redirect(url_for('login'))
+        except HTTPError as e:
+            # TODO more accurate error reporting -- pyrebase problem?
+            #flash('An account already exists for that email address!')
+            flash('Account creation failed.')
+            print(e)
+            return redirect(url_for('signup'))
+    else:
+        return render_template('signup.html', form=form)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+@not_logged_in
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        try:
+            user = auth.sign_in_with_email_and_password(form.email.data,
+                form.password.data)
+            accountInfo = auth.get_account_info(user['idToken'])
+
+            if (not accountInfo['users'][0]['emailVerified']):
+                flash('Please verify your email address!')
+            else:
+                # create new user session
+                session['idToken'] = user['idToken']
+                session['email'] = escapeEmailAddress(form.email.data)
+                flash('Login complete for email="%s"' % (form.email.data))
+        except HTTPError:
+            flash('Sorry, we couldn\'t find those credentials!')
+
+        return redirect(url_for('index'))
+    else:
+        return render_template('login.html', title='Sign in', form=form)
 
 
 @app.route('/edit', methods=['GET', 'POST'])
 @logged_in
 def edit():
-    profile = db.child('profiles').child(session['idToken'])
-    form = ProfileForm()#obj=profile)
+    # TODO prepopulate form with existing profile
+    #profile = db.child('profiles').child(session['email']).get(session['idToken']).val()
+
+    form = ProfileForm()
     if form.validate_on_submit():
         new_profile = {
             'school': form.school.data,
@@ -40,80 +94,36 @@ def edit():
             'website': form.website.data,
             'make_public': form.make_public.data
         }
-        db.child('profiles').child().update(new_profile)
+        db.child('profiles').child(session['email']).set(new_profile,
+            session['idToken'])
         flash('Profile updated.')
-        return redirect('%s/%s' % (url_for('show'), EMAIL))
+        return redirect('/show/%s' % session['email'])
     else:
         return render_template('edit.html', form=form)
 
 
-@app.route('/signup', methods=['GET', 'POST'])
-@not_logged_in
-def signup():
-    form = SignupForm()
-    if form.validate_on_submit():
-        user = None
-        try:
-            user = auth.create_user_with_email_and_password(form.email.data,
-                form.password.data)
-        except HTTPError:
-            pass
-
-        if user is not None:
-            # verify email (form validator is just a regex!)
-            auth.send_email_verification(user['idToken'])
-            # save details in the user data table
-            profile = {
-                'firstname': form.firstname.data,
-                'lastname': form.lastname.data,
-                'enabled': True
-            }
-            db.child('profiles').child(form.email.data).push(profile)
-
-            flash('Thanks for signing up! Please verify your email to log in.')
-            return redirect(url_for('login'))
+@app.route('/show/<email>', methods=['GET'])
+@logged_in # eventually only require login if make_public == false
+def show(email):
+    try:
+        user = db.child('users').child(email).get(session['idToken']).val()
+        profile = db.child('profiles').child(email).get(session['idToken']).val()
+        if user is None or profile is None:
+            return render_template('error/404.html')
         else:
-            # TODO this message may not be accurate
-            flash('An account already exists for that email address!')
-            return redirect(url_for('signup'))
-    else:
-        return render_template('signup.html', form=form)
-
-
-@app.route('/login', methods=['GET', 'POST'])
-@not_logged_in
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        # try to authenticate
-        user = None
-        try:
-            user = auth.sign_in_with_email_and_password(form.email.data,
-                form.password.data)
-        except HTTPError:
-            pass
-
-        if user is not None:
-            # if auth succeeds, see if email is verified
-            accountInfo = auth.get_account_info(user['idToken'])
-
-            if (not accountInfo['users'][0]['emailVerified']):
-                flash('Please verify your email address!')
-                return redirect(url_for('index'))
-            else:
-                # create new user session
-                session['idToken'] = user['idToken']
-                flash('Login complete for email="%s"' % (form.email.data))
-        else:
-            flash('Sorry, we couldn\'t find those credentials!')
-
-        return redirect(url_for('index'))
-    else:
-        return render_template('login.html', title='Sign in', form=form)
+            return render_template('show.html', user=user, profile=profile)
+    except HTTPError:
+        return render_template('error/400.html')
 
 
 @app.route('/logout')
 @logged_in
 def logout():
-    session.pop('idToken', None)   # end user session
+    session.pop('idToken', None) # end user session
+    session.pop('email', None)
     return redirect(url_for('index'))
+
+
+# helper
+def escapeEmailAddress(email):
+    return email.replace('.', ',')
