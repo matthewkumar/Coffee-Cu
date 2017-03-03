@@ -34,14 +34,19 @@ class ProfileForm(FlaskForm):
             ('2019', '2019'),
             ('2020', '2020')
         ])
-    major = SelectField('Major', choices=[(key, majors[key]) for key in majors])
-    about = TextAreaField('Tell the world a little bit more about yourself', [validators.Length(max=400)])
-    likes = TextAreaField('What do you like?', [validators.Length(max=150)])
-    contactfor = TextAreaField('What are some things people should contact you for?', [validators.Length(max=250)])
+    major = SelectField('Major', [validators.DataRequired()], 
+        choices=[(key, majors[key]) for key in majors])
+    about = TextAreaField('Tell the world a little bit more about yourself',
+        [validators.Length(max=400), validators.DataRequired()])
+    likes = TextAreaField('What do you like?',
+        [validators.Length(max=150), validators.DataRequired()])
+    contactfor = TextAreaField('What are some things people should contact you for?',
+        [validators.Length(max=250), validators.DataRequired()])
     twitter = StringField('Twitter')
     facebook = StringField('Facebook')
     linkedin = StringField('LinkedIn')
     website = StringField('Website')
-    make_public = BooleanField('Make your profile public to the world?')
+    make_public = BooleanField('Make your profile public to the world?',
+        [validators.DataRequired()])
 
     #def validate_image(form, field):
