@@ -8,12 +8,7 @@ from .decorators import logged_in, not_logged_in
 @app.route('/')
 @app.route('/index')
 def index():
-    user = None
-    try:
-        user = auth.get_account_info(session['idToken'])
-    except (KeyError, HTTPError):
-        pass
-    return render_template('index.html', user=user)
+    return render_template('index.html')
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -26,15 +21,16 @@ def signup():
                 form.password.data)
             auth.send_email_verification(user['idToken'])
 
-            profile = {
+            uid = user['localId']
+
+            userdata = {
+                'uid': uid,
                 'firstname': form.firstname.data,
                 'lastname': form.lastname.data,
                 'email': form.email.data,
                 'enabled': True
             }
-            escapedEmail = escapeEmailAddress(form.email.data)
-            db.child('users').child(escapedEmail).set(profile,
-                user['idToken'])
+            db.child('users').child(uid).set(userdata, user['idToken'])
 
             flash('Thanks for signing up! Please verify your email to log in.')
             return redirect(url_for('login'))
@@ -63,10 +59,12 @@ def login():
             else:
                 # create new user session
                 session['idToken'] = user['idToken']
-                session['email'] = escapeEmailAddress(form.email.data)
-                flash('Login complete for email="%s"' % (form.email.data))
-        except HTTPError:
+                uid = accountInfo['users'][0]['localId']
+                session['uid'] = uid
+                flash('Login complete for uid="%s"' % uid)
+        except HTTPError as e:
             flash('Sorry, we couldn\'t find those credentials!')
+            print(e)
 
         return redirect(url_for('index'))
     else:
@@ -94,24 +92,24 @@ def edit():
             'website': form.website.data,
             'make_public': form.make_public.data
         }
-        db.child('profiles').child(session['email']).set(new_profile,
+        db.child('profiles').child(session['uid']).set(new_profile,
             session['idToken'])
         flash('Profile updated.')
-        return redirect('/show/%s' % session['email'])
+        return redirect('/user/%s' % session['uid'])
     else:
         return render_template('edit.html', form=form)
 
 
-@app.route('/show/<email>', methods=['GET'])
+@app.route('/user/<uid>', methods=['GET'])
 @logged_in # eventually only require login if make_public == false
-def show(email):
+def user(uid):
     try:
-        user = db.child('users').child(email).get(session['idToken']).val()
-        profile = db.child('profiles').child(email).get(session['idToken']).val()
+        user = db.child('users').child(uid).get(session['idToken']).val()
+        profile = db.child('profiles').child(uid).get(session['idToken']).val()
         if user is None or profile is None:
             return render_template('error/404.html')
         else:
-            return render_template('show.html', user=user, profile=profile)
+            return render_template('user.html', user=user, profile=profile)
     except HTTPError:
         return render_template('error/400.html')
 
@@ -120,7 +118,7 @@ def show(email):
 @logged_in
 def logout():
     session.pop('idToken', None) # end user session
-    session.pop('email', None)
+    session.pop('uid', None)
     return redirect(url_for('index'))
 
 

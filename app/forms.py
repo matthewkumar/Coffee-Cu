@@ -1,10 +1,11 @@
 from flask_wtf import FlaskForm
 from wtforms import validators, StringField, PasswordField, SelectField, TextAreaField, FileField, BooleanField
-#from wtforms.validators import DataRequired
+from app import majors
 
 class LoginForm(FlaskForm):
     email = StringField('email', [validators.Email()])
     password = PasswordField('password')
+
 
 class SignupForm(FlaskForm):
     firstname = StringField('First Name', [validators.Length(min=1, max=50)])
@@ -16,6 +17,7 @@ class SignupForm(FlaskForm):
         validators.Length(min=6) # Firebase will complain otherwise
     ])
     confirm = PasswordField('Repeat Password')
+
 
 class ProfileForm(FlaskForm):
     # uni
@@ -32,10 +34,7 @@ class ProfileForm(FlaskForm):
             ('2019', '2019'),
             ('2020', '2020')
         ])
-    major = SelectField('Major', choices=[
-            ('test', 'Test Major')
-            # TODO dynamically loaded majors
-        ])
+    major = SelectField('Major', choices=[(key, majors[key]) for key in majors])
     about = TextAreaField('Tell the world a little bit more about yourself', [validators.Length(max=400)])
     likes = TextAreaField('What do you like?', [validators.Length(max=150)])
     contactfor = TextAreaField('What are some things people should contact you for?', [validators.Length(max=250)])
