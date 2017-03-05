@@ -1,10 +1,6 @@
 <html>
   <head>
-    {% if title %}
-      <title>{{ title }}</title>
-    {% else %}
-      <title>Coffee@CU</title>
-    {% endif %}
+      <title>{% block title %}{% endblock %} | Coffee@CU</title>
   </head>
   <body>
     <div><a href="/index">Home</a></div>

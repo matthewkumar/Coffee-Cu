@@ -3,7 +3,6 @@ from requests.exceptions import HTTPError
 from app import app, firebase, db, auth
 from .forms import LoginForm, SignupForm
 from .decorators import logged_in, not_logged_in
-import sys
 
 
 @app.route('/')
