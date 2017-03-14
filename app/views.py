@@ -56,7 +56,6 @@ def login():
         if user is not None:
             # if auth succeeds, see if email is verified
             accountInfo = auth.get_account_info(user['idToken'])
-
             if (not accountInfo['users'][0]['emailVerified']):
                 flash('Please verify your email address!')
                 return redirect(url_for('index'))
