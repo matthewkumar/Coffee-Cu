@@ -15,7 +15,6 @@ def index():
 
     return render_template("index.html", title='Home', user=user)
 
-
 @app.route('/signup', methods=['GET', 'POST'])
 @not_logged_in
 def signup():
@@ -27,8 +26,6 @@ def signup():
         except HTTPError: pass
 
         if user is not None:
-            # verify email (form validator is just a regex!)
-
             auth.send_email_verification(user['idToken'])
             # save details in the user data table
             userdata = { "firstname": form.firstname.data,
@@ -54,17 +51,11 @@ def login():
         user = None
         try:
             user = auth.sign_in_with_email_and_password(form.email.data, form.password.data)
-            
-            if ():
-                flash('Please fill in a Columbia affiliated email address')
-
         except HTTPError: pass
 
         if user is not None:
             # if auth succeeds, see if email is verified
-
             accountInfo = auth.get_account_info(user['idToken'])
-
 
             if (not accountInfo['users'][0]['emailVerified']):
                 flash('Please verify your email address!')
@@ -79,7 +70,6 @@ def login():
         return redirect(url_for('index'))
     else:
         return render_template('login.html', title='Sign in', form=form)
-
 
 @app.route('/logout')
 @logged_in
