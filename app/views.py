@@ -8,7 +8,10 @@ from .decorators import logged_in, not_logged_in
 @app.route('/')
 @app.route('/index')
 def index():
-    return render_template('index.html')
+    if 'idToken' in session:
+        return render_template('index.html', logged_in=True)
+    else:
+        return render_template('index.html', logged_in=False)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -41,7 +44,7 @@ def signup():
             print(e)
             return redirect(url_for('signup'))
     else:
-        return render_template('signup.html', form=form)
+        return render_template('signup.html', form=form, logged_in=False)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -68,7 +71,7 @@ def login():
 
         return redirect(url_for('index'))
     else:
-        return render_template('login.html', title='Sign in', form=form)
+        return render_template('login.html', title='Sign in', form=form, logged_in=False)
 
 
 @app.route('/edit', methods=['GET', 'POST'])
@@ -97,7 +100,7 @@ def edit():
         flash('Profile updated.')
         return redirect('/user/%s' % session['uid'])
     else:
-        return render_template('edit.html', form=form)
+        return render_template('edit.html', form=form, logged_in=True)
 
 
 @app.route('/user/<uid>', methods=['GET'])
@@ -107,11 +110,11 @@ def user(uid):
         user = db.child('users').child(uid).get(session['idToken']).val()
         profile = db.child('profiles').child(uid).get(session['idToken']).val()
         if user is None or profile is None:
-            return render_template('error/404.html')
+            return render_template('error/404.html', logged_in=True)
         else:
-            return render_template('user.html', user=user, profile=profile)
+            return render_template('user.html', user=user, profile=profile, logged_in=True)
     except HTTPError:
-        return render_template('error/400.html')
+        return render_template('error/400.html', logged_in=True)
 
 
 @app.route('/logout')
