@@ -120,8 +120,3 @@ def logout():
     session.pop('idToken', None) # end user session
     session.pop('uid', None)
     return redirect(url_for('index'))
-
-
-# helper
-def escapeEmailAddress(email):
-    return email.replace('.', ',')
