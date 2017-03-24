@@ -9,6 +9,7 @@
 *.swp
 .Python
 *.log
+pip-selfcheck.json
 man/
 /venv
 

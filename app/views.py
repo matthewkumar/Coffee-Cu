@@ -1,11 +1,10 @@
 from flask import render_template, flash, redirect, session, url_for, request
-#from flaskext.mail import Mail
-#from flaskext.mail import Message
 from requests.exceptions import HTTPError
 from app import app, firebase, db, auth
-from .forms import LoginForm, SignupForm, ContactForm
+from .forms import LoginForm, SignupForm
 from .decorators import logged_in, not_logged_in
 from flask_mail import Mail, Message
+from forms import ContactForm
 
 #app.secret_key = 'this will prevent CSRF attacks' #hidden tag?
 
@@ -89,25 +88,24 @@ def email():
 
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
-  form = ContactForm()
   mail = Mail(app)
- 
+  form = ContactForm(request.form)
   if request.method == 'POST':
-    if form.validate() == False:
-      flash('All fields are required.')
-      return render_template('contact.html', form=form)
-    else:
-      msg = Message(form.subject.data, sender='coffeeatcu@gmail.com', recipients=['hm2602@barnard.edu'])
-      msg.body = """
-      From: %s &lt;%s&gt;
-      %s
-      """ % (form.name.data, form.email.data, form.message.data)
-      mail.send(msg)
- 
-      return render_template('contact.html', success=True)
- 
+      if form.validate() == False:
+        flash('All fields are required.')
+        return render_template('contact.html', form=form)
+      else: 
+        msg = Message('Coffee@CU Email', sender='coffeeatcu@gmail.com', recipients=['hm2602@barnard.edu'])
+        msg.body = """
+        New Message from %s %s
+        %s
+        %s
+        """ % ('User firstname', 'User lastname', 'User email', form.message.data)
+        mail.send(msg)
+        flash('Sent')
+        return redirect(url_for('index'))
   elif request.method == 'GET':
-    return render_template('contact.html', form=form)
+      return render_template('contact.html', form=form)
 
 @app.route('/logout')
 @logged_in
