@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, session, url_for
+from flask import render_template, flash, redirect, session, url_for, request
 from requests.exceptions import HTTPError
 from app import app, firebase, db, auth
 from .forms import LoginForm, SignupForm
@@ -66,10 +66,10 @@ def login():
                 # create new user session
                 session['idToken'] = user['idToken']
                 flash('Login complete for email="%s"' % (form.email.data))
+                return redirect(url_for('index'))
         else:
             flash('Sorry, we couldn\'t find those credentials!')
-
-        return redirect(url_for('index'))
+            return redirect(url_for('login'))
     else:
         return render_template('login.html', title='Sign in', form=form)
 
@@ -80,9 +80,36 @@ def logout():
     session.pop('idToken', None) # end user session
     return redirect(url_for('index'))
 
+# ==========================
+# ===== error handlers =====
+# ==========================
 
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle 400 errors."""
+    return render_template('error/400.html'), 400
 
+@app.errorhandler(401)
+def not_authorized(error):
+    """Handle 401 errors."""
+    return render_template('error/401.html'), 401
 
+@app.errorhandler(403)
+def forbidden(error):
+    """Handle 403 errors."""
+    return render_template('error/403.html'), 403
 
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors."""
+    return render_template('error/404.html'), 404
 
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """Handle 405 errors."""
+    return render_template('error/405.html', method=request.method), 405
 
+@app.errorhandler(500)
+def internal_server_error(error):
+    """Handle 500 errors."""
+    return render_template('error/500.html'), 500
