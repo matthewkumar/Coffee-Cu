@@ -1,7 +1,7 @@
 from flask import render_template, flash, redirect, session, url_for
 from requests.exceptions import HTTPError
 from app import app, firebase, db, auth
-from .forms import LoginForm, SignupForm
+from .forms import LoginForm, SignupForm, ResetPasswordForm
 from .decorators import logged_in, not_logged_in
 
 
@@ -73,14 +73,20 @@ def login():
     else:
         return render_template('login.html', title='Sign in', form=form)
 
+@app.route('/resetpassword', methods=['GET', 'POST'])
+@not_logged_in
+def reset_password():
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        auth.send_password_reset_email(form.email.data)
+        return redirect(url_for('login'))
+    return render_template('resetpassword.html', title='Reset', form=form)
 
 @app.route('/logout')
 @logged_in
 def logout():
     session.pop('idToken', None) # end user session
     return redirect(url_for('index'))
-
-
 
 
 
