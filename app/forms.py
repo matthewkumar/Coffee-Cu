@@ -17,3 +17,6 @@ class SignupForm(FlaskForm):
     ])
     confirm = PasswordField('Repeat Password')
 
+class ResetPasswordForm(FlaskForm):
+    email = StringField('email', [validators.Email()])
+
