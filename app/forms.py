@@ -19,6 +19,9 @@ class SignupForm(FlaskForm):
     confirm = PasswordField('Repeat Password')
 
 
+class ResetPasswordForm(FlaskForm):
+    email = StringField('email', [validators.Email()])
+
 class ProfileForm(FlaskForm):
     # uni
     #image = FileField('Profile picture', [validators.regexp(u'^[^/\\]\.jpg$')])
@@ -50,3 +53,4 @@ class ProfileForm(FlaskForm):
         [validators.DataRequired()])
 
     #def validate_image(form, field):
+
