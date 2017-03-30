@@ -1,19 +1,18 @@
-from flask import render_template, flash, redirect, session, url_for
+from flask import render_template, flash, redirect, session, url_for, request
 from requests.exceptions import HTTPError
 from app import app, firebase, db, auth
-from .forms import LoginForm, SignupForm, ResetPasswordForm
+
+from .forms import LoginForm, SignupForm, ProfileForm, ResetPasswordForm
 from .decorators import logged_in, not_logged_in
 
 
 @app.route('/')
 @app.route('/index')
 def index():
-    user = None
     if 'idToken' in session:
-        user = auth.get_account_info(session['idToken'])
-        print("Found session for user.")
-
-    return render_template("index.html", title='Home', user=user)
+        return render_template('index.html', logged_in=True)
+    else:
+        return render_template('index.html', logged_in=False)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -21,27 +20,32 @@ def index():
 def signup():
     form = SignupForm()
     if form.validate_on_submit():
-        user = None
         try:
-            user = auth.create_user_with_email_and_password(form.email.data, form.password.data)
-        except HTTPError: pass
-
-        if user is not None:
-            # verify email (form validator is just a regex!)
+            user = auth.create_user_with_email_and_password(form.email.data,
+                form.password.data)
             auth.send_email_verification(user['idToken'])
-            # save details in the user data table
-            userdata = { "firstname": form.firstname.data,
-                        "lastname": form.lastname.data }
-            db.child("users").push(userdata, user['idToken'])
 
-            flash('Thanks for signing up!')
+            uid = user['localId']
+
+            userdata = {
+                'uid': uid,
+                'firstname': form.firstname.data,
+                'lastname': form.lastname.data,
+                'email': form.email.data,
+                'enabled': True
+            }
+            db.child('users').child(uid).set(userdata, user['idToken'])
+
+            flash('Thanks for signing up! Please verify your email to log in.')
             return redirect(url_for('login'))
-        else:
-            # TODO this message may not be accurate
-            flash('An account already exists for that email address!')
+        except HTTPError as e:
+            # TODO more accurate error reporting -- pyrebase problem?
+            #flash('An account already exists for that email address!')
+            flash('Account creation failed.')
+            print(e)
             return redirect(url_for('signup'))
     else:
-        return render_template('signup.html', title='Sign up', form=form)
+        return render_template('signup.html', form=form, logged_in=False)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -49,29 +53,26 @@ def signup():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        # try to authenticate
-        user = None
         try:
-            user = auth.sign_in_with_email_and_password(form.email.data, form.password.data)
-        except HTTPError: pass
-
-        if user is not None:
-            # if auth succeeds, see if email is verified
+            user = auth.sign_in_with_email_and_password(form.email.data,
+                form.password.data)
             accountInfo = auth.get_account_info(user['idToken'])
 
             if (not accountInfo['users'][0]['emailVerified']):
                 flash('Please verify your email address!')
-                return redirect(url_for('index'))
             else:
                 # create new user session
                 session['idToken'] = user['idToken']
-                flash('Login complete for email="%s"' % (form.email.data))
-        else:
+                uid = accountInfo['users'][0]['localId']
+                session['uid'] = uid
+                flash('Login complete for uid="%s"' % uid)
+        except HTTPError as e:
             flash('Sorry, we couldn\'t find those credentials!')
+            print(e)
 
         return redirect(url_for('index'))
     else:
-        return render_template('login.html', title='Sign in', form=form)
+        return render_template('login.html', title='Sign in', form=form, logged_in=False)
 
 @app.route('/resetpassword', methods=['GET', 'POST'])
 @not_logged_in
@@ -82,13 +83,91 @@ def reset_password():
         return redirect(url_for('login'))
     return render_template('resetpassword.html', title='Reset', form=form)
 
+@app.route('/edit', methods=['GET', 'POST'])
+@logged_in
+def edit():
+    # TODO prepopulate form with existing profile
+    #profile = db.child('profiles').child(session['email']).get(session['idToken']).val()
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle 400 errors."""
+    return render_template('error/400.html'), 400
+
+@app.errorhandler(401)
+def not_authorized(error):
+    """Handle 401 errors."""
+    return render_template('error/401.html'), 401
+
+@app.errorhandler(403)
+def forbidden(error):
+    """Handle 403 errors."""
+    return render_template('error/403.html'), 403
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors."""
+    return render_template('error/404.html'), 404
+
+    form = ProfileForm()
+    if form.validate_on_submit():
+        new_profile = {
+            'school': form.school.data,
+            'year': form.year.data,
+            'major': form.major.data,
+            'about': form.about.data,
+            'likes': form.likes.data,
+            'contactfor': form.contactfor.data,
+            'twitter': form.twitter.data,
+            'facebook': form.facebook.data,
+            'linkedin': form.linkedin.data,
+            'website': form.website.data,
+            'make_public': form.make_public.data
+        }
+        db.child('profiles').child(session['uid']).set(new_profile,
+            session['idToken'])
+        flash('Profile updated.')
+        return redirect('/user/%s' % session['uid'])
+    else:
+        return render_template('edit.html', form=form, logged_in=True)
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """Handle 405 errors."""
+    return render_template('error/405.html', method=request.method), 405
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    """Handle 500 errors."""
+    return render_template('error/500.html'), 500
+
+@app.route('/user/<uid>', methods=['GET'])
+@logged_in # eventually only require login if make_public == false
+def user(uid):
+    try:
+        user = db.child('users').child(uid).get(session['idToken']).val()
+        profile = db.child('profiles').child(uid).get(session['idToken']).val()
+        if user is None or profile is None:
+            return render_template('error/404.html', logged_in=True)
+        else:
+            return render_template('user.html', user=user, profile=profile, logged_in=True)
+    except HTTPError:
+        return render_template('error/400.html', logged_in=True)
+
+
+
 @app.route('/logout')
 @logged_in
 def logout():
     session.pop('idToken', None) # end user session
+    session.pop('uid', None)
     return redirect(url_for('index'))
-
-
+  
+# ==========================
+# ===== error handlers =====
+# ==========================
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -119,5 +198,3 @@ def method_not_allowed(error):
 def internal_server_error(error):
     """Handle 500 errors."""
     return render_template('error/500.html'), 500
-
-
